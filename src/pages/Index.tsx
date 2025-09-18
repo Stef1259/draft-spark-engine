@@ -1,4 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { User, Session } from '@supabase/supabase-js';
 import { TranscriptInput } from '@/components/TranscriptInput';
 import { SourceManager } from '@/components/SourceManager';
 import { KeyPointsEditor } from '@/components/KeyPointsEditor';
@@ -9,9 +11,59 @@ import { Project, Source, KeyPoint, StoryDirection, QuoteMatch } from '@/types';
 import { checkQuotesInDraft } from '@/utils/quoteChecker';
 import { generateMockKeyPoints, generateMockDraft } from '@/data/mockData';
 import { Separator } from '@/components/ui/separator';
-import { FileText, Sparkles } from 'lucide-react';
+import { Button } from '@/components/ui/button';
+import { FileText, Sparkles, LogOut } from 'lucide-react';
+import { supabase } from '@/integrations/supabase/client';
 
 const Index = () => {
+  const [user, setUser] = useState<User | null>(null);
+  const [session, setSession] = useState<Session | null>(null);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    // Set up auth state listener FIRST
+    const { data: { subscription } } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setSession(session);
+        setUser(session?.user ?? null);
+        setLoading(false);
+        
+        if (!session) {
+          navigate('/auth');
+        }
+      }
+    );
+
+    // THEN check for existing session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+      
+      if (!session) {
+        navigate('/auth');
+      }
+    });
+
+    return () => subscription.unsubscribe();
+  }, [navigate]);
+
+  const handleSignOut = async () => {
+    await supabase.auth.signOut();
+  };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
+        <div className="text-lg">Loading...</div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null; // Will redirect to auth
+  }
   const [project, setProject] = useState<Project>({
     id: '1',
     transcript: '',
@@ -105,16 +157,25 @@ const Index = () => {
       {/* Header */}
       <header className="sticky top-0 z-50 bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 border-b border-border">
         <div className="container mx-auto px-4 py-4">
-          <div className="flex items-center gap-3">
+          <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
               <div className="p-2 bg-primary rounded-lg">
                 <FileText className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
                 <h1 className="text-xl font-semibold text-foreground">Editorial Assistant</h1>
-                <p className="text-sm text-muted-foreground">Transform interviews into compelling articles</p>
+                <p className="text-sm text-muted-foreground">Welcome, {user.email}</p>
               </div>
             </div>
+            <Button 
+              variant="outline" 
+              size="sm" 
+              onClick={handleSignOut}
+              className="flex items-center gap-2"
+            >
+              <LogOut className="h-4 w-4" />
+              Sign Out
+            </Button>
           </div>
         </div>
       </header>
