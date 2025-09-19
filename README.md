@@ -132,6 +132,8 @@ for (const quote of quotes) {
 
 ## Sample Data & Demonstartion video
 
+Sample data used for the demo and the demonstration video can be found via the following link :https://drive.google.com/drive/folders/1BEn1Qk22iqsKnEo4qqsQ_dKLzZND7Wni?usp=sharing
+
 
 
 ## Getting Started for running locally
