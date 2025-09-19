@@ -10,10 +10,12 @@
 - Editors want human-in-the-loop control over AI-generated content
 - Source attribution and quote verification are critical for editorial integrity
 - Workflow should be intuitive for non-technical users
-- Simulated AI outputs are acceptable for MVP demonstration
 - It is aasumed that the language used for writing articles, and source content would be English
 
 ## Architecture
+
+<img width="727" height="525" alt="image" src="https://github.com/user-attachments/assets/53509d08-df3c-4820-a029-31da06dd2442" />
+
 
 ### Core Components
 
@@ -168,3 +170,5 @@ npm run build
 - **State**: React hooks + local state
 - **Export**: Client-side file generation
 - **Auth**: Supabase (demo purposes)
+- **AI**: Free Gemini APIs were used for generating the article content and the article
+- **Tools used** : Lovable (initial protype generation), Cursor (Addtional feature implementation), ChatGPT (For generating implementation plan & prompts), Vercel (Deployment)
