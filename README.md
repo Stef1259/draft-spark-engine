@@ -1,6 +1,6 @@
 # Editorial Assistant MVP
 
-A 24-hour MVP for AI-assisted article drafting from interview transcripts and supporting sources.
+
 
 ## Problem Framing & Assumptions
 
@@ -11,6 +11,7 @@ A 24-hour MVP for AI-assisted article drafting from interview transcripts and su
 - Source attribution and quote verification are critical for editorial integrity
 - Workflow should be intuitive for non-technical users
 - Simulated AI outputs are acceptable for MVP demonstration
+- It is aasumed that the language used for writing articles, and source content would be English
 
 ## Architecture
 
@@ -115,26 +116,25 @@ for (const quote of quotes) {
 2. **File Processing**: Mock PDF extraction and URL scraping
 3. **Advanced NLP**: Basic keyword matching vs. semantic analysis
 4. **Real-time Collaboration**: Single-user workflow
+5.  **User onboarding process**: Attractive landing page was removed due to time constrains
+   
 
 ### What We'd Do Next (Another Day)
-
-1. **Real AI Integration**: OpenAI/Anthropic API integration
 2. **Advanced Source Processing**: PDF text extraction, web scraping
 3. **Semantic Source Mapping**: NLP-based paragraph-to-source matching
 4. **Version Control**: Draft versioning and checkpoint system
 5. **Collaborative Features**: Multi-editor workflow
 6. **Performance**: Large transcript handling (10k+ chars)
 7. **Export Formats**: HTML, Word, and custom templates
+8. **Authorisation** : For users with admin previlages to approve articles
+9. **Grammer and spell chek inbuilt**
+10. **Fact checking using real time internet Data for reliable writing**
 
-## Demo Data
+## Sample Data & Demonstartion video
 
-The application includes realistic sample data:
 
-- **Interview Transcript**: TechTalk interview with InnovateAI CTO
-- **Supporting Sources**: Research paper and product brochure
-- **Generated Content**: AI-powered key points and article draft
 
-## Getting Started
+## Getting Started for running locally
 
 ```bash
 # Install dependencies
@@ -147,33 +147,7 @@ npm run dev
 npm run build
 ```
 
-## Deploying to Vercel
 
-This project is Vercel-ready.
-
-1) Create a new Vercel Project and import this repo
-
-2) Framework Preset: Vite
-
-3) Build settings (Vercel will autodetect):
-- Build Command: `npm run build`
-- Output Directory: `dist`
-- Install Command: `npm install`
-
-4) Environment Variables (Project Settings → Environment Variables)
-- `VITE_SUPABASE_URL` = your Supabase project URL
-- `VITE_SUPABASE_ANON_KEY` = your Supabase anon key
-- `VITE_GEMINI_API_KEY` = your Gemini API key (optional; enables real AI generation)
-
-5) Routing
-- `vercel.json` is included to ensure SPA routing to `index.html`.
-
-6) Redeploy
-- Trigger a new deployment after adding environment variables.
-
-Notes:
-- Do not commit secret keys. Use Vercel Env Vars.
-- Without `VITE_GEMINI_API_KEY`, the app gracefully uses mock data.
 
 ## Usage
 
@@ -183,22 +157,7 @@ Notes:
 4. **Generate Draft**: Create article from approved key points
 5. **Check Quotes**: Verify all quotes against sources
 6. **Export**: Download Markdown + provenance JSON
-
-## Sample Inputs
-
-- **Interview**: TechTalk with Alex Rodriguez (InnovateAI CTO)
-- **Sources**: AI Recommendation Systems Research, InnovateAI Product Brochure
-- **Output**: 800-word article with verified quotes and source mapping
-
-## Evaluation Rubric Alignment
-
-- **Core Flow Works**: ✅ Complete end-to-end workflow
-- **Quote Integrity**: ✅ Comprehensive verification system
-- **UX Clarity**: ✅ Intuitive HITL controls
-- **Product Thinking**: ✅ Smart defaults and presets
-- **Code Quality**: ✅ Clean, documented, modular
-- **Stability**: ✅ Error handling and graceful states
-- **Presentation**: ✅ Clear demo flow and documentation
+7. **PLEASE MAKE SURE TO USE A WORKING/VALID EMAIL ADDRESS AT REGISTRATION AS THE CONFIRMATION CODE WILL BE SENT TO THE EMAIL**
 
 ## Technical Stack
 
@@ -207,7 +166,3 @@ Notes:
 - **State**: React hooks + local state
 - **Export**: Client-side file generation
 - **Auth**: Supabase (demo purposes)
-
----
-
-*Built for the 24-Hour Low-Code Challenge - Article Drafting MVP*
