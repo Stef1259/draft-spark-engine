@@ -23,12 +23,16 @@ export const ExportControls = ({ project }: ExportControlsProps) => {
   };
 
   const exportJSON = () => {
+    const paragraphs = project.draftText.split('\n\n').filter(p => p.trim().length > 0);
+    
     const exportData = {
       metadata: {
         exportDate: new Date().toISOString(),
         wordCount: project.draftText.split(' ').length,
         keyPointsCount: project.keyPoints.length,
         sourcesCount: project.sources.length,
+        paragraphsCount: paragraphs.length,
+        version: '1.0.0'
       },
       project: {
         direction: project.direction,
@@ -40,14 +44,35 @@ export const ExportControls = ({ project }: ExportControlsProps) => {
           url: s.url,
         })),
       },
-      quoteMapping: project.quoteMatches.map((match, index) => ({
-        paragraph: index + 1,
-        quote: match.quote,
-        sourceId: match.sourceId,
-        sourceName: match.sourceName,
-        verified: match.found,
-        context: match.context,
-      })),
+      provenance: {
+        paragraphs: paragraphs.map((paragraph, index) => ({
+          paragraphNumber: index + 1,
+          content: paragraph.substring(0, 100) + '...',
+          wordCount: paragraph.split(' ').length,
+          sources: project.sources.filter(source => {
+            const keywords = paragraph.toLowerCase().split(' ');
+            return keywords.some(keyword => 
+              source.content.toLowerCase().includes(keyword) && keyword.length > 3
+            );
+          }).map(s => ({ id: s.id, name: s.name, type: s.type }))
+        })),
+        quoteMapping: project.quoteMatches.map((match, index) => ({
+          quoteId: index + 1,
+          quote: match.quote,
+          sourceId: match.sourceId,
+          sourceName: match.sourceName,
+          verified: match.found,
+          context: match.context,
+          confidence: match.found ? 'high' : 'none'
+        })),
+      },
+      workflow: {
+        transcriptLength: project.transcript.length,
+        keyPointsExtracted: project.keyPoints.length > 0,
+        draftGenerated: project.draftText.length > 0,
+        quotesChecked: project.quoteMatches.length > 0,
+        sourcesAttached: project.sources.length > 0
+      }
     };
 
     const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: 'application/json' });

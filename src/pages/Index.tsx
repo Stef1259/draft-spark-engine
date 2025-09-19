@@ -1,19 +1,25 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { User, Session } from '@supabase/supabase-js';
-import { TranscriptInput } from '@/components/TranscriptInput';
-import { SourceManager } from '@/components/SourceManager';
-import { KeyPointsEditor } from '@/components/KeyPointsEditor';
-import { StoryDirectionControls } from '@/components/StoryDirectionControls';
-import { DraftEditor } from '@/components/DraftEditor';
-import { ExportControls } from '@/components/ExportControls';
-import { Project, Source, KeyPoint, StoryDirection, QuoteMatch } from '@/types';
-import { checkQuotesInDraft } from '@/utils/quoteChecker';
-import { generateMockKeyPoints, generateMockDraft } from '@/data/mockData';
-import { Separator } from '@/components/ui/separator';
-import { Button } from '@/components/ui/button';
-import { FileText, Sparkles, LogOut } from 'lucide-react';
-import { supabase } from '@/integrations/supabase/client';
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { User, Session } from "@supabase/supabase-js";
+import { TranscriptInput } from "@/components/TranscriptInput";
+import { SourceManager } from "@/components/SourceManager";
+import { KeyPointsEditor } from "@/components/KeyPointsEditor";
+import { StoryDirectionControls } from "@/components/StoryDirectionControls";
+import { DraftEditor } from "@/components/DraftEditor";
+import { ExportControls } from "@/components/ExportControls";
+import { Project, Source, KeyPoint, StoryDirection, QuoteMatch } from "@/types";
+import { checkQuotesInDraft } from "@/utils/quoteChecker";
+import {
+  generateMockKeyPoints,
+  generateMockDraft,
+  mockTranscript,
+  mockSources,
+} from "@/data/mockData";
+import { GeminiService } from "@/lib/geminiService";
+import { Separator } from "@/components/ui/separator";
+import { Button } from "@/components/ui/button";
+import { FileText, Sparkles, LogOut, AlertCircle } from "lucide-react";
+import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -23,26 +29,26 @@ const Index = () => {
 
   useEffect(() => {
     // Set up auth state listener FIRST
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        setSession(session);
-        setUser(session?.user ?? null);
-        setLoading(false);
-        
-        if (!session) {
-          navigate('/auth');
-        }
+    const {
+      data: { subscription },
+    } = supabase.auth.onAuthStateChange((event, session) => {
+      setSession(session);
+      setUser(session?.user ?? null);
+      setLoading(false);
+
+      if (!session) {
+        navigate("/auth");
       }
-    );
+    });
 
     // THEN check for existing session
     supabase.auth.getSession().then(({ data: { session } }) => {
       setSession(session);
       setUser(session?.user ?? null);
       setLoading(false);
-      
+
       if (!session) {
-        navigate('/auth');
+        navigate("/auth");
       }
     });
 
@@ -53,6 +59,24 @@ const Index = () => {
     await supabase.auth.signOut();
   };
 
+  const [project, setProject] = useState<Project>({
+    id: "1",
+    transcript: "",
+    sources: [],
+    keyPoints: [],
+    direction: {
+      tone: "neutral",
+      length: "medium",
+      angle: "",
+    },
+    draftText: "",
+    quoteMatches: [],
+  });
+
+  const [isExtracting, setIsExtracting] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [isCheckingQuotes, setIsCheckingQuotes] = useState(false);
+
   if (loading) {
     return (
       <div className="min-h-screen bg-gradient-to-br from-background via-background to-muted/20 flex items-center justify-center">
@@ -62,81 +86,139 @@ const Index = () => {
   }
 
   if (!user) {
-    return null; // Will redirect to auth
+    // Show a fallback UI while redirecting
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg text-muted-foreground">
+          Redirecting to sign in...
+        </div>
+      </div>
+    );
   }
-  const [project, setProject] = useState<Project>({
-    id: '1',
-    transcript: '',
-    sources: [],
-    keyPoints: [],
-    direction: {
-      tone: 'neutral',
-      length: 'medium',
-      angle: ''
-    },
-    draftText: '',
-    quoteMatches: []
-  });
 
-  const [isExtracting, setIsExtracting] = useState(false);
-  const [isGenerating, setIsGenerating] = useState(false);
-  const [isCheckingQuotes, setIsCheckingQuotes] = useState(false);
+  const loadDemoData = () => {
+    setProject((prev) => ({
+      ...prev,
+      transcript: mockTranscript,
+      sources: mockSources,
+    }));
+  };
 
   const updateTranscript = (transcript: string) => {
-    setProject(prev => ({ ...prev, transcript }));
+    setProject((prev) => ({ ...prev, transcript }));
   };
 
   const updateSources = (sources: Source[]) => {
-    setProject(prev => ({ ...prev, sources }));
+    setProject((prev) => ({ ...prev, sources }));
   };
 
   const updateKeyPoints = (keyPoints: KeyPoint[]) => {
-    setProject(prev => ({ ...prev, keyPoints }));
+    setProject((prev) => ({ ...prev, keyPoints }));
   };
 
   const updateDirection = (direction: StoryDirection) => {
-    setProject(prev => ({ ...prev, direction }));
+    setProject((prev) => ({ ...prev, direction }));
   };
 
   const updateDraft = (draftText: string) => {
-    setProject(prev => ({ ...prev, draftText }));
+    setProject((prev) => ({ ...prev, draftText }));
   };
 
-  const extractKeyPoints = () => {
+  const extractKeyPoints = async () => {
     if (!project.transcript.trim()) {
-      alert('Please add a transcript first');
+      alert("Please add a transcript first");
       return;
     }
 
     setIsExtracting(true);
-    setTimeout(() => {
+
+    try {
+      // Try Gemini API first
+      if (GeminiService.isConfigured()) {
+        const result = await GeminiService.extractKeyPoints(
+          project.transcript,
+          project.sources
+        );
+
+        if (result.success && result.data) {
+          updateKeyPoints(result.data);
+          return;
+        } else {
+          console.warn(
+            "Gemini API failed, falling back to mock data:",
+            result.error
+          );
+        }
+      }
+
+      // Fallback to mock data
       const mockPoints = generateMockKeyPoints();
       updateKeyPoints(mockPoints);
+    } catch (error) {
+      console.error("Error extracting key points:", error);
+      alert("Failed to extract key points. Using mock data instead.");
+      // Fallback to mock data
+      const mockPoints = generateMockKeyPoints();
+      updateKeyPoints(mockPoints);
+    } finally {
       setIsExtracting(false);
-    }, 2000);
+    }
   };
 
-  const generateDraft = () => {
+  const generateDraft = async () => {
     if (project.keyPoints.length === 0) {
-      alert('Please extract key points first');
+      alert("Please extract key points first");
       return;
     }
 
     setIsGenerating(true);
-    setTimeout(() => {
+
+    try {
+      // Try Gemini API first
+      if (GeminiService.isConfigured()) {
+        const result = await GeminiService.generateDraft(
+          project.keyPoints,
+          project.direction,
+          project.transcript,
+          project.sources
+        );
+
+        if (result.success && result.data) {
+          updateDraft(result.data);
+          return;
+        } else {
+          console.warn(
+            "Gemini API failed, falling back to mock data:",
+            result.error
+          );
+        }
+      }
+
+      // Fallback to mock data
       const draft = generateMockDraft(
         project.direction.tone,
         project.direction.length,
         project.direction.angle
       );
       updateDraft(draft);
+    } catch (error) {
+      console.error("Error generating draft:", error);
+      alert("Failed to generate draft. Using mock data instead.");
+      // Fallback to mock data
+      const draft = generateMockDraft(
+        project.direction.tone,
+        project.direction.length,
+        project.direction.angle
+      );
+      updateDraft(draft);
+    } finally {
       setIsGenerating(false);
-    }, 3000);
+    }
   };
 
   const checkQuotes = () => {
     if (!project.draftText.trim()) {
-      alert('Please generate a draft first');
+      alert("Please generate a draft first");
       return;
     }
 
@@ -147,7 +229,7 @@ const Index = () => {
         project.transcript,
         project.sources
       );
-      setProject(prev => ({ ...prev, quoteMatches: matches }));
+      setProject((prev) => ({ ...prev, quoteMatches: matches }));
       setIsCheckingQuotes(false);
     }, 1500);
   };
@@ -163,34 +245,65 @@ const Index = () => {
                 <FileText className="w-6 h-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-xl font-semibold text-foreground">Editorial Assistant</h1>
-                <p className="text-sm text-muted-foreground">Welcome, {user.email}</p>
+                <h1 className="text-xl font-semibold text-foreground">
+                  Editorial Assistant
+                </h1>
+                <p className="text-sm text-muted-foreground">
+                  Welcome, {user.email}
+                </p>
               </div>
             </div>
-            <Button 
-              variant="outline" 
-              size="sm" 
-              onClick={handleSignOut}
-              className="flex items-center gap-2"
-            >
-              <LogOut className="h-4 w-4" />
-              Sign Out
-            </Button>
+            <div className="flex gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={loadDemoData}
+                className="flex items-center gap-2"
+              >
+                <Sparkles className="h-4 w-4" />
+                Load Demo Data
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleSignOut}
+                className="flex items-center gap-2"
+              >
+                <LogOut className="h-4 w-4" />
+                Sign Out
+              </Button>
+            </div>
           </div>
         </div>
       </header>
+
+      {/* API Status Indicator */}
+      {!GeminiService.isConfigured() && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3 mx-4 my-4">
+          <div className="flex items-center gap-2 text-yellow-800">
+            <AlertCircle className="h-4 w-4" />
+            <span className="text-sm font-medium">
+              Gemini API not configured - using mock data
+            </span>
+          </div>
+          <p className="text-xs text-yellow-700 mt-1">
+            Set VITE_GEMINI_API_KEY environment variable to enable real AI
+            generation
+          </p>
+        </div>
+      )}
 
       <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Workflow Steps */}
         <div className="grid gap-8 lg:grid-cols-2">
           {/* Step 1: Transcript Input */}
-          <TranscriptInput 
+          <TranscriptInput
             transcript={project.transcript}
             onTranscriptChange={updateTranscript}
           />
 
           {/* Step 2: Source Management */}
-          <SourceManager 
+          <SourceManager
             sources={project.sources}
             onSourcesChange={updateSources}
           />
@@ -199,7 +312,7 @@ const Index = () => {
         <Separator className="my-8" />
 
         {/* Step 3: Key Points Extraction */}
-        <KeyPointsEditor 
+        <KeyPointsEditor
           keyPoints={project.keyPoints}
           onKeyPointsChange={updateKeyPoints}
           onExtractKeyPoints={extractKeyPoints}
@@ -209,7 +322,7 @@ const Index = () => {
         <Separator className="my-8" />
 
         {/* Step 4: Story Direction */}
-        <StoryDirectionControls 
+        <StoryDirectionControls
           direction={project.direction}
           onDirectionChange={updateDirection}
         />
@@ -217,7 +330,7 @@ const Index = () => {
         <Separator className="my-8" />
 
         {/* Step 5: Draft Generation & Editing */}
-        <DraftEditor 
+        <DraftEditor
           draftText={project.draftText}
           onDraftChange={updateDraft}
           onGenerateDraft={generateDraft}
@@ -225,6 +338,7 @@ const Index = () => {
           quoteMatches={project.quoteMatches}
           onCheckQuotes={checkQuotes}
           isCheckingQuotes={isCheckingQuotes}
+          sources={project.sources}
         />
 
         <Separator className="my-8" />
@@ -238,7 +352,10 @@ const Index = () => {
         <div className="container mx-auto px-4 text-center">
           <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
             <Sparkles className="w-4 h-4" />
-            <span>AI-powered editorial workflow • Simulated outputs for demonstration</span>
+            <span>
+              AI-powered editorial workflow • Simulated outputs for
+              demonstration
+            </span>
           </div>
         </div>
       </footer>

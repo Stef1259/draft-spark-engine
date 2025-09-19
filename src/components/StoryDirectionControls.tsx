@@ -1,9 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
-import { Slider } from '@/components/ui/slider';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
 import { StoryDirection } from '@/types';
-import { Compass } from 'lucide-react';
+import { Compass, Sparkles } from 'lucide-react';
 
 interface StoryDirectionControlsProps {
   direction: StoryDirection;
@@ -15,6 +16,33 @@ const lengthLabels = {
   medium: '500-800 words',
   long: '800-1200 words'
 };
+
+const directionPresets = [
+  {
+    name: 'Founder Story',
+    tone: 'storytelling' as const,
+    length: 'medium' as const,
+    angle: 'Focus on the personal journey, challenges overcome, and the human side of innovation. Emphasize the founder\'s vision and determination.'
+  },
+  {
+    name: 'Technical Deep-Dive',
+    tone: 'neutral' as const,
+    length: 'long' as const,
+    angle: 'Emphasize technical architecture, implementation details, and engineering challenges. Focus on the technical innovation and its implications.'
+  },
+  {
+    name: 'Press Release',
+    tone: 'press-release' as const,
+    length: 'short' as const,
+    angle: 'Highlight key achievements, market impact, and future plans. Use formal language suitable for media distribution.'
+  },
+  {
+    name: 'User Impact',
+    tone: 'storytelling' as const,
+    length: 'medium' as const,
+    angle: 'Focus on how the innovation affects end users, real-world applications, and the broader impact on people\'s lives.'
+  }
+];
 
 export const StoryDirectionControls = ({ direction, onDirectionChange }: StoryDirectionControlsProps) => {
   const updateDirection = (updates: Partial<StoryDirection>) => {
@@ -30,6 +58,38 @@ export const StoryDirectionControls = ({ direction, onDirectionChange }: StoryDi
         </CardTitle>
       </CardHeader>
       <CardContent className="space-y-6">
+        {/* Direction Presets */}
+        <div className="space-y-3">
+          <label className="text-sm font-medium text-foreground">
+            Quick Presets
+          </label>
+          <div className="grid gap-2 sm:grid-cols-2 lg:grid-cols-4">
+            {directionPresets.map((preset) => (
+              <Button
+                key={preset.name}
+                variant="outline"
+                size="sm"
+                onClick={() => updateDirection({
+                  tone: preset.tone,
+                  length: preset.length,
+                  angle: preset.angle
+                })}
+                className="h-auto p-3 text-left justify-start"
+              >
+                <div>
+                  <div className="font-medium text-xs">{preset.name}</div>
+                  <div className="text-xs text-muted-foreground mt-1">
+                    {preset.tone} • {lengthLabels[preset.length]}
+                  </div>
+                </div>
+              </Button>
+            ))}
+          </div>
+          <p className="text-xs text-muted-foreground">
+            Click a preset to quickly set tone, length, and focus
+          </p>
+        </div>
+
         <div className="grid gap-6 md:grid-cols-2">
           <div className="space-y-2">
             <label className="text-sm font-medium text-foreground">

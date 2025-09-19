@@ -2,12 +2,16 @@ import { Source, QuoteMatch } from '@/types';
 
 export const findQuotesInText = (text: string): string[] => {
   // Find text within quotes - matches both single and double quotes
-  const quoteRegex = /["']([^"']{10,}?)["']/g;
+  // Also handles block quotes and emphasized text
+  const quoteRegex = /["']([^"']{10,}?)["']|"([^"]{10,}?)"|'([^']{10,}?)'/g;
   const quotes: string[] = [];
   let match;
   
   while ((match = quoteRegex.exec(text)) !== null) {
-    quotes.push(match[1].trim());
+    const quote = match[1] || match[2] || match[3];
+    if (quote && quote.trim().length > 10) {
+      quotes.push(quote.trim());
+    }
   }
   
   return quotes;

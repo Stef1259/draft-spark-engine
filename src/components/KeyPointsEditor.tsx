@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
 import { KeyPoint } from '@/types';
-import { Lightbulb, ChevronUp, ChevronDown, Trash2, Sparkles } from 'lucide-react';
+import { GeminiService } from '@/lib/geminiService';
+import { Lightbulb, ChevronUp, ChevronDown, Trash2, Sparkles, Bot } from 'lucide-react';
 
 interface KeyPointsEditorProps {
   keyPoints: KeyPoint[];
@@ -99,9 +100,19 @@ export const KeyPointsEditor = ({
         ) : (
           <div className="space-y-3">
             <div className="flex items-center gap-2 mb-4">
-              <Badge variant="secondary" className="bg-accent/20 text-accent-foreground">
-                <Sparkles className="w-3 h-3 mr-1" />
-                Simulated AI Output
+              <Badge 
+                variant="secondary" 
+                className={GeminiService.isConfigured() 
+                  ? "bg-green-100 text-green-800 border-green-200" 
+                  : "bg-accent/20 text-accent-foreground"
+                }
+              >
+                {GeminiService.isConfigured() ? (
+                  <Bot className="w-3 h-3 mr-1" />
+                ) : (
+                  <Sparkles className="w-3 h-3 mr-1" />
+                )}
+                {GeminiService.isConfigured() ? 'Real AI Generated' : 'Simulated AI Output'}
               </Badge>
               <span className="text-sm text-muted-foreground">
                 {keyPoints.length} key points found

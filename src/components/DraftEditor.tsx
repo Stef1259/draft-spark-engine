@@ -3,8 +3,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Textarea } from '@/components/ui/textarea';
-import { QuoteMatch } from '@/types';
-import { FileText, Sparkles, CheckCircle, AlertCircle } from 'lucide-react';
+import { HoverCard, HoverCardContent, HoverCardTrigger } from '@/components/ui/hover-card';
+import { QuoteMatch, Source } from '@/types';
+import { GeminiService } from '@/lib/geminiService';
+import { FileText, Sparkles, CheckCircle, AlertCircle, Link, Bot } from 'lucide-react';
 
 interface DraftEditorProps {
   draftText: string;
@@ -14,6 +16,7 @@ interface DraftEditorProps {
   quoteMatches: QuoteMatch[];
   onCheckQuotes: () => void;
   isCheckingQuotes: boolean;
+  sources?: Source[];
 }
 
 export const DraftEditor = ({ 
@@ -23,7 +26,8 @@ export const DraftEditor = ({
   isGenerating,
   quoteMatches,
   onCheckQuotes,
-  isCheckingQuotes
+  isCheckingQuotes,
+  sources = []
 }: DraftEditorProps) => {
   return (
     <Card className="w-full bg-editor border-editor-border shadow-editorial-sm">
@@ -67,21 +71,95 @@ export const DraftEditor = ({
         ) : (
           <div className="space-y-4">
             <div className="flex items-center gap-2 mb-4">
-              <Badge variant="secondary" className="bg-accent/20 text-accent-foreground">
-                <Sparkles className="w-3 h-3 mr-1" />
-                Simulated AI Output
+              <Badge 
+                variant="secondary" 
+                className={GeminiService.isConfigured() 
+                  ? "bg-green-100 text-green-800 border-green-200" 
+                  : "bg-accent/20 text-accent-foreground"
+                }
+              >
+                {GeminiService.isConfigured() ? (
+                  <Bot className="w-3 h-3 mr-1" />
+                ) : (
+                  <Sparkles className="w-3 h-3 mr-1" />
+                )}
+                {GeminiService.isConfigured() ? 'Real AI Generated' : 'Simulated AI Output'}
               </Badge>
               <span className="text-sm text-muted-foreground">
                 {draftText.split(' ').length} words
               </span>
             </div>
             
-            <Textarea
-              value={draftText}
-              onChange={(e) => onDraftChange(e.target.value)}
-              className="min-h-[400px] resize-none bg-background border-border focus:border-primary font-serif leading-relaxed"
-              placeholder="Your article draft will appear here..."
-            />
+            <div className="space-y-4">
+              <Textarea
+                value={draftText}
+                onChange={(e) => onDraftChange(e.target.value)}
+                className="min-h-[400px] resize-none bg-background border-border focus:border-primary font-serif leading-relaxed"
+                placeholder="Your article draft will appear here..."
+              />
+              
+              {/* Source Mapping for Paragraphs */}
+              {sources.length > 0 && draftText && (
+                <div className="space-y-3">
+                  <h4 className="text-sm font-medium text-foreground flex items-center gap-2">
+                    <Link className="w-4 h-4 text-accent" />
+                    Source Mapping
+                  </h4>
+                  <div className="grid gap-2">
+                    {draftText.split('\n\n').map((paragraph, index) => {
+                      if (paragraph.trim().length === 0) return null;
+                      
+                      // Simple heuristic: assign sources based on paragraph content
+                      const relevantSources = sources.filter(source => {
+                        const keywords = paragraph.toLowerCase().split(' ');
+                        return keywords.some(keyword => 
+                          source.content.toLowerCase().includes(keyword) && keyword.length > 3
+                        );
+                      });
+                      
+                      return (
+                        <HoverCard key={index}>
+                          <HoverCardTrigger asChild>
+                            <div className="p-3 bg-section border border-border rounded-lg cursor-pointer hover:bg-accent/5 transition-colors">
+                              <div className="flex items-center justify-between">
+                                <span className="text-sm font-medium">Paragraph {index + 1}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {relevantSources.length} source{relevantSources.length !== 1 ? 's' : ''}
+                                </Badge>
+                              </div>
+                              <p className="text-xs text-muted-foreground mt-1 line-clamp-2">
+                                {paragraph.substring(0, 100)}...
+                              </p>
+                            </div>
+                          </HoverCardTrigger>
+                          <HoverCardContent className="w-80">
+                            <div className="space-y-2">
+                              <h4 className="text-sm font-medium">Supporting Sources:</h4>
+                              {relevantSources.length > 0 ? (
+                                <div className="space-y-2">
+                                  {relevantSources.map((source) => (
+                                    <div key={source.id} className="p-2 bg-background border rounded text-xs">
+                                      <div className="font-medium">{source.name}</div>
+                                      <div className="text-muted-foreground">
+                                        {source.type.toUpperCase()} • {source.content.substring(0, 80)}...
+                                      </div>
+                                    </div>
+                                  ))}
+                                </div>
+                              ) : (
+                                <p className="text-xs text-muted-foreground">
+                                  No specific sources mapped to this paragraph
+                                </p>
+                              )}
+                            </div>
+                          </HoverCardContent>
+                        </HoverCard>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+            </div>
             
             {quoteMatches.length > 0 && (
               <div className="space-y-3">
