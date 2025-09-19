@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 import { User, Session } from "@supabase/supabase-js";
 import { TranscriptInput } from "@/components/TranscriptInput";
 import { SourceManager } from "@/components/SourceManager";
@@ -20,10 +20,11 @@ import { GeminiService } from "@/lib/geminiService";
 import { projectStorage } from "@/lib/projectStorage";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { FileText, Sparkles, LogOut, AlertCircle } from "lucide-react";
+import { FileText, Sparkles, LogOut, AlertCircle, ArrowLeft, Save } from "lucide-react";
 import { supabase } from "@/integrations/supabase/client";
 
 const Index = () => {
+  const { id: routeProjectId } = useParams();
   const [user, setUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
@@ -62,7 +63,8 @@ const Index = () => {
   };
 
   const [project, setProject] = useState<Project>(() => {
-    const local = projectStorage.getAll(user?.id || "anon")[0];
+    const all = projectStorage.getAll(user?.id || "anon");
+    const local = (routeProjectId && all.find(p => p.id === routeProjectId)) || all[0];
     return (
       local || {
         id: "1",
@@ -288,11 +290,29 @@ const Index = () => {
               <Button
                 variant="outline"
                 size="sm"
+                onClick={() => navigate('/projects')}
+                className="flex items-center gap-2"
+              >
+                <ArrowLeft className="h-4 w-4" />
+                Back
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
                 onClick={loadDemoData}
                 className="flex items-center gap-2"
               >
                 <Sparkles className="h-4 w-4" />
                 Load Demo Data
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => projectStorage.update(user?.id || 'anon', project)}
+                className="flex items-center gap-2"
+              >
+                <Save className="h-4 w-4" />
+                Save
               </Button>
               <Button
                 variant="outline"
