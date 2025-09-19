@@ -30,10 +30,21 @@ export interface QuoteMatch {
 
 export interface Project {
   id: string;
+  title?: string;
   transcript: string;
   sources: Source[];
   keyPoints: KeyPoint[];
   direction: StoryDirection;
   draftText: string;
   quoteMatches: QuoteMatch[];
+  createdAt?: string;
+  updatedAt?: string;
+  versions?: Array<{
+    id: string;
+    label: string;
+    createdAt: string;
+    draftText: string;
+    keyPoints: KeyPoint[];
+    direction: StoryDirection;
+  }>;
 }

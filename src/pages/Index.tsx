@@ -7,6 +7,7 @@ import { KeyPointsEditor } from "@/components/KeyPointsEditor";
 import { StoryDirectionControls } from "@/components/StoryDirectionControls";
 import { DraftEditor } from "@/components/DraftEditor";
 import { ExportControls } from "@/components/ExportControls";
+import { ProjectManager } from "@/components/ProjectManager";
 import { Project, Source, KeyPoint, StoryDirection, QuoteMatch } from "@/types";
 import { checkQuotesInDraft } from "@/utils/quoteChecker";
 import {
@@ -16,6 +17,7 @@ import {
   mockSources,
 } from "@/data/mockData";
 import { GeminiService } from "@/lib/geminiService";
+import { projectStorage } from "@/lib/projectStorage";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 import { FileText, Sparkles, LogOut, AlertCircle } from "lucide-react";
@@ -59,18 +61,27 @@ const Index = () => {
     await supabase.auth.signOut();
   };
 
-  const [project, setProject] = useState<Project>({
-    id: "1",
-    transcript: "",
-    sources: [],
-    keyPoints: [],
-    direction: {
-      tone: "neutral",
-      length: "medium",
-      angle: "",
-    },
-    draftText: "",
-    quoteMatches: [],
+  const [project, setProject] = useState<Project>(() => {
+    const local = projectStorage.getAll(user?.id || "anon")[0];
+    return (
+      local || {
+        id: "1",
+        title: "Untitled Project",
+        transcript: "",
+        sources: [],
+        keyPoints: [],
+        direction: {
+          tone: "neutral",
+          length: "medium",
+          angle: "",
+        },
+        draftText: "",
+        quoteMatches: [],
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+        versions: [],
+      }
+    );
   });
 
   const [isExtracting, setIsExtracting] = useState(false);
@@ -97,31 +108,51 @@ const Index = () => {
   }
 
   const loadDemoData = () => {
-    setProject((prev) => ({
-      ...prev,
-      transcript: mockTranscript,
-      sources: mockSources,
-    }));
+    setProject((prev) => {
+      const next = { ...prev, transcript: mockTranscript, sources: mockSources, updatedAt: new Date().toISOString() };
+      projectStorage.update(user?.id || "anon", next);
+      return next;
+    });
   };
 
   const updateTranscript = (transcript: string) => {
-    setProject((prev) => ({ ...prev, transcript }));
+    setProject((prev) => {
+      const next = { ...prev, transcript, updatedAt: new Date().toISOString() };
+      projectStorage.update(user?.id || "anon", next);
+      return next;
+    });
   };
 
   const updateSources = (sources: Source[]) => {
-    setProject((prev) => ({ ...prev, sources }));
+    setProject((prev) => {
+      const next = { ...prev, sources, updatedAt: new Date().toISOString() };
+      projectStorage.update(user?.id || "anon", next);
+      return next;
+    });
   };
 
   const updateKeyPoints = (keyPoints: KeyPoint[]) => {
-    setProject((prev) => ({ ...prev, keyPoints }));
+    setProject((prev) => {
+      const next = { ...prev, keyPoints, updatedAt: new Date().toISOString() };
+      projectStorage.update(user?.id || "anon", next);
+      return next;
+    });
   };
 
   const updateDirection = (direction: StoryDirection) => {
-    setProject((prev) => ({ ...prev, direction }));
+    setProject((prev) => {
+      const next = { ...prev, direction, updatedAt: new Date().toISOString() };
+      projectStorage.update(user?.id || "anon", next);
+      return next;
+    });
   };
 
   const updateDraft = (draftText: string) => {
-    setProject((prev) => ({ ...prev, draftText }));
+    setProject((prev) => {
+      const next = { ...prev, draftText, updatedAt: new Date().toISOString() };
+      projectStorage.update(user?.id || "anon", next);
+      return next;
+    });
   };
 
   const extractKeyPoints = async () => {
@@ -295,7 +326,16 @@ const Index = () => {
 
       <main className="container mx-auto px-4 py-8 space-y-8">
         {/* Workflow Steps */}
-        <div className="grid gap-8 lg:grid-cols-2">
+        <div className="grid gap-8 lg:grid-cols-3">
+          <div className="lg:col-span-1">
+            <ProjectManager
+              userId={user.id}
+              current={project}
+              onSelect={(p) => setProject(p)}
+              onSaveVersion={(label) => projectStorage.addVersion(user.id, project.id, label)}
+            />
+          </div>
+          <div className="lg:col-span-2 space-y-8">
           {/* Step 1: Transcript Input */}
           <TranscriptInput
             transcript={project.transcript}
@@ -307,6 +347,7 @@ const Index = () => {
             sources={project.sources}
             onSourcesChange={updateSources}
           />
+          </div>
         </div>
 
         <Separator className="my-8" />
